@@ -3,12 +3,40 @@
  */
 package BitbucketCleaner;
 
+import com.cdancy.bitbucket.rest.BitbucketClient;
+import com.cdancy.bitbucket.rest.domain.repository.Repository;
+import com.cdancy.bitbucket.rest.domain.repository.RepositoryPage;
+
 public class App {
-    public String getGreeting() {
-        return "Hello world.";
+  private static final String USERNAME = System.getenv("BITBUCKET_REST_USERNAME");
+  private static final String PASSWORD = System.getenv("BITBUCKET_REST_PASSWORD");
+
+  public static void main(String[] args) {
+    if (USERNAME == null || PASSWORD == null) {
+      System.err.println("ERROR: Set BITBUCKET_REST_USERNAME and BITBUCKET_REST_PASSWORD");
+      System.exit(1);
     }
 
-    public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+    if (USERNAME.isEmpty() || PASSWORD.isEmpty()) {
+      System.err.println("ERROR: Set BITBUCKET_REST_USERNAME and BITBUCKET_REST_PASSWORD");
+      System.exit(1);
     }
+
+    String project = "DEV";
+    if (args.length == 1) {
+        project = args[0];
+    }
+
+    BitbucketClient client = BitbucketClient.builder()
+        .endPoint("http://localhost:7990")
+        .credentials(String.format("%s:%s", USERNAME, PASSWORD))
+        .build();
+
+    RepositoryPage repositoryPage = client.api().repositoryApi().list(project, 0, 1000);
+    System.out.println(String.format("Found %d repos", repositoryPage.values().size()));
+    for (Repository repo : repositoryPage.values()) {
+      System.out.println(String.format("Deleting: %s", repo.name()));
+      client.api().repositoryApi().delete(project, repo.name());
+    }
+  }
 }
